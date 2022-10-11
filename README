@@ -1,0 +1,63 @@
+Andreea Prigoreanu
+321CA
+                        Tema 1 - ROUTER
+
+    Obs: In implementarea protocalelor ARP si ICMP am utilizat functiile
+ajutatoare: send_arp, send_icmp si send_icmp_error din scheletul alternativ
+pus in arhiva initiala postata pe moodle.
+
+    Principalele structuri folosite in program sunt:
+    - rtable: vector ce retine intrarile din tabela de rutare
+    - arp_table: cache ARP local ce retine perechile adresa ip + adresa mac
+    primite in arp reply
+    - packets_queue: coada in care sunt pastrate pachetele pentru care se
+    se asteapta adresa mac a urmatorului hop
+
+    Am rezolvat urmatoarele cerinte:
+1. ARP PROTOCOL
+    Un pachet ARP primit poate fi de doua feluri:
+    a) arp request:
+        -> folosind functia send_arp se trimite un pachet arp reply ce contine
+    adresa mac. 
+        -> in noul pachet se interseaza adresa ip sursa si destinatie din
+    pachetul primit; adresa mac destinatie devine adresa sursa din arp header,
+    iar adresa mac sursa devine adresa mac a interfetei curente.
+
+    b)arp reply
+        -> se introduce o noua intrare in arp_table cu adresa ip si adresa mac
+        primite in pachetula arp
+        -> se parcurge coada de pachete si se trimit acele pachete pentru care
+        s-a primti adresa mac a destinatiei
+
+2. Procesul de dirijare
+    In cazul in care s-a primit un pachet ip:
+    -> daca pachetul este pentru router si daca este un pachet de tip icmp echo
+    request, se raspunde cu icmp reply cu ajutorul functiei send_icmp
+    -> daca checksum-ul pachetului este incorect, se da drop la pachet
+    -> daca ttl-ul pachetului este mai mic sau egal cu 1, se trimite un pachet
+    icmp error de tip ICMP_TIME_EXCEEDED, folosind functia send_icmp_error si
+    se arunca pachetul
+    -> pachetele care nu sunt destinate routerului trebuie trimise mai departe
+    si se cauta in tabela de routare cea mai buna ruta
+    -> daca nu a fost gasita o ruta in tabela de rutare, se trimite un pachet
+    icmp error de tip ICMP_DEST_UNREACH, folosind functia send_icmp_error si
+    se arunca pachetul
+    -> se actualizeaza ttl-ul si checksum-ul pachetului
+    -> daca in tabela arp nu se gaseste adresa mac corespunzatoare adresei ip a
+    urmatorului hop, pachetul se introduce in coada de pachete netrimise
+    pachets_queue si se trimite un arp_request cu adresa de broadcast pentru a
+    obtine adresa mac
+    -> daca in tabela arp se gaseste adresa mac corespunzatoare adresei ip a
+    urmatorului hop, se actualizeaza ehter header si interfata si se trimite
+    pachetul
+
+3. Longest Prefix Match eficient:
+    -> am sortat rtable dupa prefix&mask, iar in caz de egalitate dupa masca
+    -> am folosit cautarea binara pentru a gasi best match in tabela de rutare
+    pentru un ip dat
+
+4. Protocolul ICMP: a fost implementat cu ajutorul functiilor send_icmp si
+send_icmp_error
+
+5. Bonus - actualizare checksum: am utilizat formula gasita in articolul de la
+referinte
